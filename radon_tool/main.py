@@ -14,34 +14,54 @@ from . import templates
 # 'size'   : 22}
 # matplotlib.rc("font",**font)
 
-
 def analyse_my_files(rootpath=None):
     mylist = os.listdir()
     path = os.getcwd()
-
+    
     if rootpath == None:
         rootpath = path
 
     d = {}
     sub_d = {}
     rpl = len(rootpath)
-
+    
     for maybe_file in mylist:
         if os.path.isdir(maybe_file):
             os.chdir(maybe_file)
-            r= analyse_my_files(rootpath)
+            r = analyse_my_files(rootpath)
             os.chdir("..")
             
             if len(r) == 0:
                 continue
-            print("analysed",maybe_file,r)
+            #wtf.
+            collected={}
+            for key in r:
+                if ".py" in key:
+                    for cat_key in r[key]:
+                        if cat_key not in collected:
+                            collected[cat_key]=0
+                        collected[cat_key]+=r[key][cat_key]
+                
+                if key in ["A","B","C","D","E","F"]:
+                    if key not in collected:
+                        collected[key]=0
+                    collected[key]+=r[key]
+                
+            for key in collected:
+                if key in ["A","B","C","D","E","F"]:
+                    if key not in d:
+                        d[key]=0
+                    d[key]+= collected[key]
+                
             d[maybe_file] = r
-
-        else:
+           
+           
+        elif ".py" in maybe_file:
             r = analyse_file(maybe_file)
+            
             if r != None:
                 d[maybe_file] = r
-
+    
     return d
 
 
@@ -72,76 +92,49 @@ def analyse_file(fn):
     return bins
 
 
-def recursive_plot_output_all(my_dict, previouslevelfn=None, folders=True, files=True):
+def recursive_plot_output_all(my_dict, this_level_fn=None):
     render_file_names = []
-    project_file_path = "."
-    
-    
+    temp_d = {}
+    links =[]
     for filepath in my_dict:
-        temp_d = {}
+        filedata = my_dict[filepath]
         
         if ".py" in filepath:
-            continue
-        print("")
-        print("filepath",filepath)
-        new_sub_folder = "output_"+filepath
-        print("trying to make", new_sub_folder)
-        
-        try:
-            os.mkdir(new_sub_folder)
-        except FileExistsError:
-            pass
-        
-        old_path = os.getcwd()
-        links = []
-        print("should be more?",my_dict[filepath].keys())
-        for filename in my_dict[filepath]:
-            filedata = my_dict[filepath][filename]
-            
             if len(filedata)==0:
-                print("filepath",filepath,"no data")
                 continue
-                
-            if files and ".py" in filename:
-                nfn = str(filename).split(".")[0]
-                real_fn = plot_output_single(
-                    filedata, filepath, output_name=str(nfn))
-
-                sub_d = {"name":filename, "filename": real_fn}
-                render_file_names.append(sub_d)
+            nfn = str(filepath).split(".")[0]
+            real_fn = plot_output_single(filedata, output_name=str(nfn))
+            render_file_names.append(real_fn)
             
-            print(temp_d)
-            for key in filedata:
-                if type(filedata[key])!=dict:
-                    if key not in temp_d:
-                        temp_d[key] = 0
-                    temp_d[key] += filedata[key]
-            print("filepath",filename,"added")
-            print(temp_d)
-            if not ".py" in filename:
-                links.append(filename)
-
-        if folders:
-            n = str(filepath)
+        else:
             
-            real_fn = plot_output_single(temp_d, filepath, output_name=n)
-            name = filepath.split("/")[-1]
-            if real_fn != None:
-                sub_d = {"name": name, "filename": real_fn}
-                render_file_names.append(sub_d)
-
-        if len(my_dict[filepath]) != 0:
-
-            current = os.getcwd()
+            # this is where we go deeper.
+            if type(filedata)==dict:
+                if len(filedata)==0:
+                    continue
+                new_sub_folder="output_"+filepath
+                old_path = os.getcwd()
+                try:
+                    os.mkdir(new_sub_folder)
+                except FileExistsError:
+                    pass
+                os.chdir(new_sub_folder)
+                recursive_plot_output_all(my_dict[filepath], this_level_fn=filepath)
+                os.chdir(old_path)
+                links.append(filepath)
             
-            os.chdir(new_sub_folder)
-            create_html(render_file_names, links, previouslevelfn)
-            recursive_plot_output_all(
-                my_dict[filepath], previouslevelfn="output.html", folders=folders, files=files)
-            os.chdir(current)
-            
-        os.chdir(old_path)
-
+            # we're not in the results, we're just counting.
+            else:
+                key = filepath
+                if key not in temp_d:
+                    temp_d[key] = 0
+                temp_d[key] += my_dict[key]
+    if temp_d !={}:
+        real_fn = plot_output_single(temp_d, output_name="summed_deeper_levels")
+        render_file_names.append(real_fn)
+    print(render_file_names)
+    create_html(render_file_names, links, this_level_fn)
+    
     return render_file_names
 
 
@@ -156,20 +149,7 @@ def count_all(d):
     a = 1
 
 
-def plot_output_single(bins, filepath, output_name="output"):
-
-    if len(bins) == 0:
-        return None
-
-    new_sub_folder = "output_"+filepath.split("/")[-1]
-    
-    try:
-        os.mkdir(new_sub_folder)
-    except FileExistsError:
-        pass
-    old_path = os.getcwd()
-
-    os.chdir(new_sub_folder)
+def plot_output_single(bins,  output_name="output"):
 
     mylabels = []
     real_labels = []
@@ -183,14 +163,13 @@ def plot_output_single(bins, filepath, output_name="output"):
     for rank in mylabels:
         slices.append(bins[rank[0]])
         real_labels.append(rank[0]+":"+str(rank[1]))
-    print(slices)
-    plt.pie(slices, labels=real_labels)
     
+    plt.pie(slices, labels=real_labels)
+    plt.title(output_name)
     nfn = "radonpie" + output_name + ".svg"
     plt.legend()
     plt.savefig(nfn)
     plt.clf()
-    os.chdir(old_path)
 
     return nfn
 
@@ -211,22 +190,20 @@ def resort_info_boxes(r2):
         m = 4
         new_l = []
         while c < m and len(r2) > 0:
-
             el = r2.pop(0)
             new_l.append(el)
-
             c += 1
         new_rows.append(new_l)
         
     return new_rows
 
-def create_html(render_file_names, links, previouslevelfn):
+def create_html(render_file_names, links, this_level_fn):
 
     new_rows = resort_info_boxes(render_file_names)
-
+    print(new_rows)
     data = {"plotfiles": new_rows, 
             "links": links,
-            "previouslevelfn": previouslevelfn}
+            "this_level_fn": this_level_fn}
    
     my_temp = pkg_resources.read_text(templates, "template.html")
     T = jinja2.Template(my_temp)
@@ -235,11 +212,10 @@ def create_html(render_file_names, links, previouslevelfn):
     with open("output.html", "w") as f:
         f.write(text)
 
-
 def main(make_output=True):
 
     r = analyse_my_files()
-
+    print("final",r)
     if make_output:
         recursive_plot_output_all(r)
 

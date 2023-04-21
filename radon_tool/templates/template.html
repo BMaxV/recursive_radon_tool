@@ -7,8 +7,8 @@
 
 <body>
 <h2>quality</h2>
-{% if previouslevelfn!=None %}
-<a href="../{{previouslevelfn}}">go up</a>
+{% if this_level_fn!=None %}
+<a href="../output.html">go up</a>
 {% endif %}
 
 <ul>
@@ -21,7 +21,7 @@
 {% for row in plotfiles %}
 <tr>
     {% for entry in row %}
-    <td width="25%" >{{entry["name"]}}<br><img  width="100%" src="./{{entry['filename']}}"/></td>
+    <td width="25%" >{{entry["name"]}}<br><img  width="100%" src="./{{entry}}"/></td>
     {% endfor %}
 </tr>
 {% endfor %}
