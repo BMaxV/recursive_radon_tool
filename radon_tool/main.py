@@ -15,40 +15,34 @@ from . import templates
 # matplotlib.rc("font",**font)
 
 
-def analyse_my_files(paths=None, rootpath=None):
+def analyse_my_files(rootpath=None):
     mylist = os.listdir()
-
     path = os.getcwd()
 
     if rootpath == None:
         rootpath = path
 
     d = {}
-    paths = {}
     sub_d = {}
     rpl = len(rootpath)
-    relative_path = path[rpl:]
-
-    paths[path] = relative_path
 
     for maybe_file in mylist:
         if os.path.isdir(maybe_file):
             os.chdir(maybe_file)
-            r, paths = analyse_my_files(paths, rootpath)
+            r= analyse_my_files(rootpath)
             os.chdir("..")
             
             if len(r) == 0:
                 continue
             print("analysed",maybe_file,r)
             d[maybe_file] = r
-            paths[maybe_file] = paths
 
         else:
             r = analyse_file(maybe_file)
             if r != None:
                 d[maybe_file] = r
 
-    return d, paths
+    return d
 
 
 def analyse_file(fn):
@@ -78,15 +72,18 @@ def analyse_file(fn):
     return bins
 
 
-def recursive_plot_output_all(my_dict, paths, previouslevelfn=None, folders=True, files=True):
+def recursive_plot_output_all(my_dict, previouslevelfn=None, folders=True, files=True):
     render_file_names = []
     project_file_path = "."
-    temp_d = {}
+    
     
     for filepath in my_dict:
+        temp_d = {}
+        
         if ".py" in filepath:
             continue
-        
+        print("")
+        print("filepath",filepath)
         new_sub_folder = "output_"+filepath
         print("trying to make", new_sub_folder)
         
@@ -97,15 +94,15 @@ def recursive_plot_output_all(my_dict, paths, previouslevelfn=None, folders=True
         
         old_path = os.getcwd()
         links = []
-        
-
+        print("should be more?",my_dict[filepath].keys())
         for filename in my_dict[filepath]:
             filedata = my_dict[filepath][filename]
             
             if len(filedata)==0:
+                print("filepath",filepath,"no data")
                 continue
                 
-            if files and  ".py" in filename:
+            if files and ".py" in filename:
                 nfn = str(filename).split(".")[0]
                 real_fn = plot_output_single(
                     filedata, filepath, output_name=str(nfn))
@@ -113,12 +110,14 @@ def recursive_plot_output_all(my_dict, paths, previouslevelfn=None, folders=True
                 sub_d = {"name":filename, "filename": real_fn}
                 render_file_names.append(sub_d)
             
+            print(temp_d)
             for key in filedata:
                 if type(filedata[key])!=dict:
                     if key not in temp_d:
                         temp_d[key] = 0
                     temp_d[key] += filedata[key]
-
+            print("filepath",filename,"added")
+            print(temp_d)
             if not ".py" in filename:
                 links.append(filename)
 
@@ -138,7 +137,7 @@ def recursive_plot_output_all(my_dict, paths, previouslevelfn=None, folders=True
             os.chdir(new_sub_folder)
             create_html(render_file_names, links, previouslevelfn)
             recursive_plot_output_all(
-                my_dict[filepath], paths, previouslevelfn="output.html", folders=folders, files=files)
+                my_dict[filepath], previouslevelfn="output.html", folders=folders, files=files)
             os.chdir(current)
             
         os.chdir(old_path)
@@ -239,10 +238,10 @@ def create_html(render_file_names, links, previouslevelfn):
 
 def main(make_output=True):
 
-    r, paths = analyse_my_files()
+    r = analyse_my_files()
 
     if make_output:
-        recursive_plot_output_all(r, paths)
+        recursive_plot_output_all(r)
 
 
 if __name__ == "__main__":
