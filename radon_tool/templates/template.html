@@ -1,0 +1,31 @@
+<!doctype html>
+<head>
+    <title>Game Home</title>
+    <meta charset="utf-8"> 
+    <link rel="stylesheet" type="text/css" href="/home/max/mainstyle.css"/>
+</head>
+
+<body>
+<h2>quality</h2>
+{% if previouslevelfn!=None %}
+<a href="../{{previouslevelfn}}">go up</a>
+{% endif %}
+
+<ul>
+{% for link in links %}
+    <li><a href="./output_{{link}}/output.html">{{link}}</a></li>
+{% endfor %}
+</ul>
+
+<table width="100%">
+{% for row in plotfiles %}
+<tr>
+    {% for entry in row %}
+    <td width="25%" >{{entry["name"]}}<br><img  width="100%" src="./{{entry['filename']}}"/></td>
+    {% endfor %}
+</tr>
+{% endfor %}
+
+</table>
+
+</body>
