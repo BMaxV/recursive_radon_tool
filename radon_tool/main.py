@@ -2,9 +2,12 @@ from radon.complexity import cc_rank, cc_visit
 import matplotlib.pyplot as plt
 import os
 import jinja2
-import importlib.resources as pkg_resources
 
+import importlib.resources as pkg_resources
 from . import templates
+
+import argparse
+
 
 # import matplotlib
 
@@ -14,7 +17,9 @@ from . import templates
 # 'size'   : 22}
 # matplotlib.rc("font",**font)
 
-def analyse_my_files(rootpath=None):
+def analyse_my_files(rootpath=None,skip_errors=True):
+    assert "home" in os.getcwd()
+    
     mylist = os.listdir()
     path = os.getcwd()
     
@@ -26,10 +31,20 @@ def analyse_my_files(rootpath=None):
     rpl = len(rootpath)
     
     for maybe_file in mylist:
-        if os.path.isdir(maybe_file):
-            os.chdir(maybe_file)
-            r = analyse_my_files(rootpath)
-            os.chdir("..")
+        
+        if os.path.isdir(maybe_file) and not os.path.islink(maybe_file):
+            
+            if maybe_file in ["build","built","docs","dist","tests","deps"]:
+                continue
+            
+            try:
+                old=os.getcwd()
+                os.chdir(maybe_file)
+                r = analyse_my_files(rootpath,skip_errors=skip_errors)
+                os.chdir(old)
+            except RecursionError:
+                r = {}
+            
             
             if len(r) == 0:
                 continue
@@ -57,10 +72,16 @@ def analyse_my_files(rootpath=None):
            
            
         elif ".py" in maybe_file:
-            r = analyse_file(maybe_file)
+            try:
+                r = analyse_file(maybe_file)
+                if r != None:
+                    d[maybe_file] = r
+            except:
+                print("error parsing",maybe_file)
+                print(os.getcwd())
+                if not skip_errors:
+                    raise
             
-            if r != None:
-                d[maybe_file] = r
     
     return d
 
@@ -69,6 +90,7 @@ def analyse_file(fn):
     
     if fn[-3:] != ".py":
         return
+    
     with open(fn, "r") as f:
         t = f.read()
     r = cc_visit(t)
@@ -93,7 +115,9 @@ def analyse_file(fn):
 
 
 def recursive_plot_output_all(my_dict, this_level_fn=None):
+    path = os.getcwd()
     render_file_names = []
+    
     temp_d = {}
     links =[]
     for filepath in my_dict:
@@ -115,9 +139,14 @@ def recursive_plot_output_all(my_dict, this_level_fn=None):
                 new_sub_folder="output_"+filepath
                 old_path = os.getcwd()
                 try:
-                    os.mkdir(new_sub_folder)
-                except FileExistsError:
-                    pass
+                    try:
+                        os.mkdir(new_sub_folder)
+                    except FileExistsError:
+                        pass
+                except PermissionError:
+                    print("new_sub_folder",new_sub_folder)
+                    print(os.getcwd())
+                    raise
                 os.chdir(new_sub_folder)
                 recursive_plot_output_all(my_dict[filepath], this_level_fn=filepath)
                 os.chdir(old_path)
@@ -129,10 +158,11 @@ def recursive_plot_output_all(my_dict, this_level_fn=None):
                 if key not in temp_d:
                     temp_d[key] = 0
                 temp_d[key] += my_dict[key]
+    
     if temp_d !={}:
         real_fn = plot_output_single(temp_d, output_name="summed_deeper_levels")
         render_file_names.append(real_fn)
-    print(render_file_names)
+    
     create_html(render_file_names, links, this_level_fn)
     
     return render_file_names
@@ -200,7 +230,7 @@ def resort_info_boxes(r2):
 def create_html(render_file_names, links, this_level_fn):
 
     new_rows = resort_info_boxes(render_file_names)
-    print(new_rows)
+    
     data = {"plotfiles": new_rows, 
             "links": links,
             "this_level_fn": this_level_fn}
@@ -212,13 +242,28 @@ def create_html(render_file_names, links, this_level_fn):
     with open("output.html", "w") as f:
         f.write(text)
 
-def main(make_output=True):
-
-    r = analyse_my_files()
-    print("final",r)
+def main(make_output=True, skip_errors=True):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dontskiperrors", 
+    action='store_const', const=True,
+    help="disable skipping over problems, to trigger the stacktrace and take a look what's causing the problem.")
+    
+    args=parser.parse_args()
+    #parser.add_argument("--skip-errors", help="increase output verbosity")
+    if args.dontskiperrors:
+        skip_errors=False
+    print("\n\n\n",[args],"\n\n\n")
+    r = analyse_my_files(skip_errors=skip_errors)
+    
+    try:
+        os.mkdir("radon_tool_output")
+    except FileExistsError:
+        pass
+    os.chdir("radon_tool_output")
     if make_output:
         recursive_plot_output_all(r)
 
 
 if __name__ == "__main__":
+    
     main()
