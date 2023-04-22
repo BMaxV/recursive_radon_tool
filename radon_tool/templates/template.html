@@ -1,6 +1,6 @@
 <!doctype html>
 <head>
-    <title>Game Home</title>
+    <title>Radon cyclic complexity viewer</title>
     <meta charset="utf-8"> 
     <link rel="stylesheet" type="text/css" href="/home/max/mainstyle.css"/>
 </head>
@@ -17,11 +17,11 @@
 {% endfor %}
 </ul>
 
-<table width="100%">
+<table width="25%">
 {% for row in plotfiles %}
-<tr>
+<tr >
     {% for entry in row %}
-    <td width="25%" >{{entry["name"]}}<br><img  width="100%" src="./{{entry}}"/></td>
+    <td style="width:25%;" ><img width="100%" src="./{{entry}}"/></td>
     {% endfor %}
 </tr>
 {% endfor %}

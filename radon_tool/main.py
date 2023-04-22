@@ -1,5 +1,6 @@
 from radon.complexity import cc_rank, cc_visit
 import matplotlib.pyplot as plt
+import matplotlib
 import os
 import jinja2
 
@@ -33,8 +34,8 @@ def analyse_my_files(rootpath=None,skip_errors=True):
     for maybe_file in mylist:
         
         if os.path.isdir(maybe_file) and not os.path.islink(maybe_file):
-            
-            if maybe_file in ["build","built","docs","dist","tests","deps"]:
+            # maybe load the gitignore?
+            if maybe_file in ["build","built","docs","dist","tests","deps","targetroot"]:
                 continue
             
             try:
@@ -193,8 +194,10 @@ def plot_output_single(bins,  output_name="output"):
     for rank in mylabels:
         slices.append(bins[rank[0]])
         real_labels.append(rank[0]+":"+str(rank[1]))
-    
-    plt.pie(slices, labels=real_labels)
+    #@cmap=plt.get_cmap("viridis")
+    colors=["lightgreen","yellow","orange","red","red","red","red"]
+    #raise ValueError
+    plt.pie(slices, labels=real_labels, colors=colors)
     plt.title(output_name)
     nfn = "radonpie" + output_name + ".svg"
     plt.legend()
@@ -252,7 +255,7 @@ def main(make_output=True, skip_errors=True):
     #parser.add_argument("--skip-errors", help="increase output verbosity")
     if args.dontskiperrors:
         skip_errors=False
-    print("\n\n\n",[args],"\n\n\n")
+    
     r = analyse_my_files(skip_errors=skip_errors)
     
     try:
