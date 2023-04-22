@@ -3,7 +3,9 @@
 recursive graphical tool for https://pypi.org/project/radon/
 
 install with
+
 `pip3 install requirements.txt --user`
+
 `python3 setup.py install --user`
 
 use with
