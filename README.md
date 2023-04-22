@@ -21,6 +21,7 @@ as well as the sum of "deeper" levels.
 
 like this:
 
+![alttext](example/radonpiesummed_deeper_levels.svg)
 
 # other notes
 
